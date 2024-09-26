@@ -2,7 +2,7 @@ import sys
 import cv2 
 
 
-cap = cv2.VideoCapture("video.mp4")
+cap = cv2.VideoCapture("./4weeks/video.mp4")
 
 if not cap.isOpened():
     sys.exit("카메라 연결 실패")
@@ -27,5 +27,5 @@ cv2.destroyAllWindows()
 ## 캡쳐된 프레임 저장
 if len(captures) > 0 :
     for i,capture in enumerate(captures):
-        cv2.imwrite(f"./outputs/frame-{i}.jpg", capture)
+        cv2.imwrite(f"./4weeks/outputs/frame-{i}.jpg", capture)
     
