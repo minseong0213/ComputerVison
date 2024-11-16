@@ -1,9 +1,9 @@
 import cv2 as cv
 import numpy as np
 import winsound
+
 import sys
 from PyQt6.QtWidgets import *
-# from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtGui import QImage, QPixmap
 
 class PanoramaViewer(QLabel):
@@ -11,12 +11,12 @@ class PanoramaViewer(QLabel):
         super().__init__()
         self.panorama_image = panorama_image
         self.image_width = panorama_image.shape[1]
-        self.display_width = 700  # 화면에 표시할 가로 크기
+        self.display_width = 700  
         self.offset = 0
         self.update_display()
 
     def update_display(self):
-        # offset에 따라 이미지의 특정 구간만 보여줌 (360도 회전 없이 시작과 끝에서 멈춤)
+
         start_x = max(0, min(self.offset, self.image_width - self.display_width))
         view = self.panorama_image[:, start_x:start_x + self.display_width]
         
@@ -36,16 +36,16 @@ class Panorama(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("파노라마 영상")
-        self.setGeometry(200, 200, 700, 100)
+        self.setGeometry(200, 200, 700, 200)
         
-        collectButton = QPushButton("영상 수집", self)
+        self.collectButton = QPushButton("영상 수집", self)
         self.showButton = QPushButton("영상 보기", self)
         self.stitchButton = QPushButton("봉합", self)
         self.saveButton = QPushButton("저장", self)
         quitButton = QPushButton("나가기", self)
         self.label = QLabel("환영합니다!", self)
         
-        collectButton.setGeometry(10, 25, 100, 30)
+        self.collectButton.setGeometry(10, 25, 100, 30)
         self.showButton.setGeometry(110, 25, 100, 30)
         self.stitchButton.setGeometry(210, 25, 100, 30)
         self.saveButton.setGeometry(310, 25, 100, 30)
@@ -56,11 +56,13 @@ class Panorama(QMainWindow):
         self.stitchButton.setEnabled(False)
         self.saveButton.setEnabled(False)
         
-        collectButton.clicked.connect(self.collectFunction)
+        self.collectButton.clicked.connect(self.collectFunction)
         self.showButton.clicked.connect(self.showFunction)
         self.stitchButton.clicked.connect(self.stitchFunction)
         self.saveButton.clicked.connect(self.saveFunction)
         quitButton.clicked.connect(self.quitFunction)
+        
+        self.collectButton.setObjectName("collectButton")  
         
     def collectFunction(self):
         self.showButton.setEnabled(False)
@@ -98,29 +100,44 @@ class Panorama(QMainWindow):
             stack = np.hstack((stack, cv.resize(self.imgs[i], dsize=(0, 0), fx=0.25, fy=0.25)))
         cv.imshow("Image collection", stack)
         
+
     def stitchFunction(self):
         stitcher = cv.Stitcher_create()
         status, self.img_stitched = stitcher.stitch(self.imgs)
-        if status == cv.STITCHER_OK:
-            # 파노라마 이미지가 성공적으로 생성되면, PanoramaViewer를 사용해 스크롤 가능하게 표시
-            self.viewer = PanoramaViewer(self.img_stitched)  # PanoramaViewer는 스크롤 가능한 커스텀 QLabel 클래스
-            self.setCentralWidget(self.viewer)  # 파노라마 뷰어를 중앙 위젯으로 설정
-            self.label.setText("좌우로 드래그하여 파노라마를 보세요.")
-        else:
-            # 스티칭 실패 시 알림과 함께 메시지 표시
-            winsound.Beep(3000, 500)
-            self.label.setText("파노라마 제작에 실패하였습니다. 다시 시도하세요.")
         
+        if status == cv.STITCHER_OK:
+            self.viewer_window = QMainWindow()  
+            self.viewer_window.setWindowTitle("파노라마 뷰어")
+            self.viewer_window.setGeometry(300, 300, 700, 400)  
+            
+            self.viewer = PanoramaViewer(self.img_stitched) 
+            self.viewer_window.setCentralWidget(self.viewer)  
+            
+
+            self.collectButton.setEnabled(False)  
+            self.viewer_window.show()  
+            
+            self.viewer_window.closeEvent = self.enable_collect_button
+            
+            self.label.setText("파노라마가 성공적으로 생성되었습니다. 새 창에서 확인하세요.")
+        else:
+            self.label.setText("파노라마 제작에 실패하였습니다. 다시 시도하세요.")
+
+    def enable_collect_button(self, event):
+        collect_button = self.findChild(QPushButton, "collectButton")
+        if collect_button:
+            collect_button.setEnabled(True)
+        event.accept()  
+
     def saveFunction(self):
-        fname = QFileDialog.getSaveFileName(self, '파일 저장', './')
-        if fname[0]:  # 사용자가 파일 이름을 선택한 경우에만 저장 수행
+        fname = QFileDialog.getSaveFileName(self, '파일 저장', './','Images (*.png *.jpg *.bmp)')
+        if fname[0]:  
             cv.imwrite(fname[0], self.img_stitched)
     
     def quitFunction(self):
         try:
             self.cap.release()
         except AttributeError:
-            # 만약 캡처가 종료된 경우 오류 발생 방지
             pass
         cv.destroyAllWindows()
         self.close()
