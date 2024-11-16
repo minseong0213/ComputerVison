@@ -1,2 +1,12 @@
 cv07/data/
 vision_agent/venv
+
+
+# Python 캐시 파일
+__pycache__/
+*.pyc
+*.pyo
+
+# PyInstaller 빌드 파일
+build/
+*.spec
